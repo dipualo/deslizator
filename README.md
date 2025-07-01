@@ -1,5 +1,6 @@
 # Deslizator
 
+
 This repository is based on a programming paradigms practice for the Computer Science degree at the University of Valladolid.  
 This practice is a block-falling video game in the style of Tetris, made in Python with the help of the wxPython library. A video example of a game execution is included.
 
