@@ -1,371 +1,378 @@
 """
-Práctica de la asignatura paradigmas de programacion basada en u juego estilo tetris con la libreria wxPYTHON
+Practice for the Programming Paradigms course based on a Tetris-style game using the wxPYTHON library.
 
-Está práctica esta hecha con usando wx panel para representar el tablero.
+This practice uses wx.Panel to represent the board.
 
-Se ha considerado que los colores según la letra :
-a o A o carácter no identificado: verde oscuro, b o B: azul, c o C: rojo
+Colors are assigned based on the letter:
+a or A or unidentified character: dark green, b or B: blue, c or C: red.
 
-Se usado la clase tablero, fila y bloque de la práctica anterior (con alguna pequeña modificación y revisión de
-comentarios) y se han modificado partes del código de la práctica interior para insertarlo en está en la clase
-MyFrame
+The classes Board, Row, and Block from the previous practice have been reused (with some small modifications and comment revisions),
+and parts of the interior practice code have been modified to be integrated into this MyFrame class.
 
-Para realizar jugadas hay que desplazar los bloques al lado que se quiera o pulsar una posicion sin bloques para dejar caer
-la fila de arriba
+To make moves, you need to drag blocks to the desired side or click on an empty position to drop the row above.
 """
 
 import wx
 
 class MyFrame(wx.Frame):
 
-    # Se inicializa la interfaz gráfica
+    # Initialize the graphical user interface
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         self.SetSize((650, 450))
         self.SetTitle("Deslizator")
-        sizer_0 = wx.BoxSizer(wx.VERTICAL)
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
+        
+        top_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        main_sizer.Add(top_sizer, 1, wx.ALL | wx.EXPAND, 5)
 
-        sizer_arriba = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_0.Add(sizer_arriba, 1, wx.ALL | wx.EXPAND, 5 )
+        left_sizer = wx.BoxSizer(wx.VERTICAL)
+        top_sizer.Add(left_sizer, 1, wx.ALL | wx.EXPAND, 5)
 
-        sizer_izq = wx.BoxSizer(wx.VERTICAL)
-        sizer_arriba.Add(sizer_izq, 1, wx.ALL | wx.EXPAND, 5)
+        file_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        left_sizer.Add(file_sizer, 0, 0, 0)
 
-        sizer_fich = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_izq.Add(sizer_fich, 0, 0, 0)
+        self.start_button = wx.Button(self, wx.ID_ANY, "New Game")
+        left_sizer.Add(self.start_button, 0, wx.ALL | wx.EXPAND, 5)
 
-        self.inic_partida = wx.Button(self, wx.ID_ANY, "Nueva partida")
-        sizer_izq.Add(self.inic_partida, 0, wx.ALL | wx.EXPAND, 5)
+        speed_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        left_sizer.Add(speed_sizer, 0, 0, 0)
 
-        sizer_velocidad = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_izq.Add(sizer_velocidad, 0, 0, 0)
+        speed_label = wx.StaticText(self, wx.ID_ANY, "Animation speed: ")
+        speed_sizer.Add(speed_label, 0, wx.ALL, 5)
 
-        label_4 = wx.StaticText(self, wx.ID_ANY, u"Velocidad animación: ")
-        sizer_velocidad.Add(label_4, 0, wx.ALL, 5)
+        self.speed_ctrl = wx.SpinCtrl(self, wx.ID_ANY, "50", min=1, max=100)
+        speed_sizer.Add(self.speed_ctrl, 0, 0, 0)
 
-        self.velocidad = wx.SpinCtrl(self, wx.ID_ANY, "50", min=1, max=100)
-        sizer_velocidad.Add(self.velocidad, 0, 0, 0)
+        rows_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        left_sizer.Add(rows_sizer, 0, 0, 0)
 
-        sizer_n_filas = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_izq.Add(sizer_n_filas, 0, 0, 0)
+        rows_label = wx.StaticText(self, wx.ID_ANY, "Number of rows: ")
+        rows_sizer.Add(rows_label, 0, wx.ALL, 5)
 
-        label_3 = wx.StaticText(self, wx.ID_ANY, u"Nº filas: ")
-        sizer_n_filas.Add(label_3, 0, wx.ALL, 5)
+        self.rows_ctrl = wx.SpinCtrl(self, wx.ID_ANY, "12", min=2, max=23)
+        rows_sizer.Add(self.rows_ctrl, 0, 0, 0)
 
-        self.ins_n_filas = wx.SpinCtrl(self, wx.ID_ANY, "12", min=2, max=23)
-        sizer_n_filas.Add(self.ins_n_filas, 0, 0, 0)
+        moves_label = wx.StaticText(self, wx.ID_ANY, "Moves list:")
+        left_sizer.Add(moves_label, 0, 0, 0)
 
-        label_2 = wx.StaticText(self, wx.ID_ANY, "Lista de jugadas:")
-        sizer_izq.Add(label_2, 0, 0, 0)
+        self.moves_listbox = wx.ListBox(self, wx.ID_ANY, choices=[], style=wx.LB_MULTIPLE)
+        left_sizer.Add(self.moves_listbox, 1, wx.EXPAND, 0)
 
-        self.lista_jugadas = wx.ListBox(self, wx.ID_ANY, choices=[], style=wx.LB_MULTIPLE)
-        sizer_izq.Add(self.lista_jugadas, 1, wx.EXPAND, 0)
+        self.score_label = wx.StaticText(self, wx.ID_ANY, "Score: 0")
+        self.score_label.SetForegroundColour(wx.Colour(255, 0, 0))
+        self.score_label.SetFont(wx.Font(15, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, "Arial"))
+        left_sizer.Add(self.score_label, 0, 0, 0)
 
-        self.puntuacion = wx.StaticText(self, wx.ID_ANY, "Puntuación: 0")
-        self.puntuacion.SetForegroundColour(wx.Colour(255, 0, 0))
-        self.puntuacion.SetFont(wx.Font(15, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, "Arial"))
-        sizer_izq.Add(self.puntuacion, 0, 0, 0)
+        right_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        top_sizer.Add(right_sizer, 3, wx.ALL | wx.EXPAND, 5)
 
-        sizer_der = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_arriba.Add(sizer_der, 3, wx.ALL | wx.EXPAND, 5)
+        self.letters_sizer = wx.BoxSizer(wx.VERTICAL)
+        right_sizer.Add(self.letters_sizer, 0, wx.BOTTOM | wx.TOP | wx.EXPAND, 10)
 
-        self.sizer_letras = wx.BoxSizer(wx.VERTICAL)
-        sizer_der.Add(self.sizer_letras, 0, wx.BOTTOM | wx.TOP | wx.EXPAND, 10)
+        self.num_rows = self.rows_ctrl.GetValue()
+        self.can_start = False
 
-        self.n_filas = self.ins_n_filas.GetValue()
-        self.se_puede_empezar = False
+        self.panels_matrix = []
 
-        self.pintar_letras()
+        self.draw_letters()
 
-        self.sizer_tablero_y_num = wx.BoxSizer(wx.VERTICAL)
-        sizer_der.Add(self.sizer_tablero_y_num, 3, wx.ALL | wx.EXPAND, 5)
-        self.tablero_grafico = wx.GridBagSizer(2, 0)
-        self.sizer_tablero_y_num.Add(self.tablero_grafico, 10, wx.EXPAND, 1)
+        self.board_and_numbers_sizer = wx.BoxSizer(wx.VERTICAL)
+        right_sizer.Add(self.board_and_numbers_sizer, 3, wx.ALL | wx.EXPAND, 5)
+        self.graphic_board = wx.GridBagSizer(2, 0)
+        self.board_and_numbers_sizer.Add(self.graphic_board, 10, wx.EXPAND, 1)
 
-        self.anadir_col = True #Sirve para no añadir y eliminar columnas growbles de nuevo al cambiar el n de filas
-        self.llenar_tablero_grafico()
-        self.anadir_col = False
+        self.add_columns = True  # Prevent adding/removing growable columns again when changing number of rows
+        self.fill_graphic_board()
+        self.add_columns = False
 
-        sizer_numeros = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_tablero_y_num.Add(sizer_numeros, 0, wx.LEFT | wx.EXPAND, 20)
+        numbers_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.board_and_numbers_sizer.Add(numbers_sizer, 0, wx.LEFT | wx.EXPAND, 20)
         for num in range(10):
-            numero = wx.StaticText(self, wx.ID_ANY, str(num))
-            numero.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
-            sizer_numeros.Add(numero, 1, wx.ALIGN_CENTER_VERTICAL , 0)
+            number_label = wx.StaticText(self, wx.ID_ANY, str(num))
+            number_label.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+            numbers_sizer.Add(number_label, 1, wx.ALIGN_CENTER_VERTICAL, 0)
 
-        self.estado = wx.StaticText(self, wx.ID_ANY, "Introduzca un fichero y un nº de filas para empezar")
-        self.estado.SetFont(wx.Font(15, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, "Arial"))
-        sizer_0.Add(self.estado, 0, 0, 0)
+        self.status_label = wx.StaticText(self, wx.ID_ANY, "Load a file and set number of rows to start")
+        self.status_label.SetFont(wx.Font(15, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, "Arial"))
+        main_sizer.Add(self.status_label, 0, 0, 0)
 
-        self.leer_fich()
+        self.read_file()
 
-        self.SetSizer(sizer_0)
+        self.SetSizer(main_sizer)
 
         self.Layout()
         self.timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.pintar_siguiente_estado, self.timer)
-        self.Bind(wx.EVT_BUTTON, self.on_click_inic_partida, self.inic_partida)
-        self.Bind(wx.EVT_SPINCTRL, self.on_spin_filas, self.ins_n_filas)
-        self.Bind(wx.EVT_TEXT_ENTER, self.on_spin_filas, self.ins_n_filas)
-        self.Bind(wx.EVT_SPINCTRL, self.on_spin_velocidad, self.velocidad)
-        self.Bind(wx.EVT_TEXT, self.on_spin_velocidad, self.velocidad)
-        self.esperando_jugada = False
-        self.haciendo_jugada = False
-        self.tiempo_pintar_sig_estado = 1800 // self.n_filas #Cuántas más filas más rápido y cuántas menos más lento
+        self.Bind(wx.EVT_TIMER, self.draw_next_state, self.timer)
+        self.Bind(wx.EVT_BUTTON, self.on_click_start_game, self.start_button)
+        self.Bind(wx.EVT_SPINCTRL, self.on_spin_rows, self.rows_ctrl)
+        self.Bind(wx.EVT_TEXT_ENTER, self.on_spin_rows, self.rows_ctrl)
+        self.Bind(wx.EVT_SPINCTRL, self.on_spin_speed, self.speed_ctrl)
+        self.Bind(wx.EVT_TEXT, self.on_spin_speed, self.speed_ctrl)
+        self.waiting_for_move = False
+        self.making_move = False
+        self.time_to_draw_next_state = 1800 // self.num_rows  # More rows = faster, fewer rows = slower
 
-    def on_spin_velocidad(self, event):
-        self.variacion_tiempo = 50/self.velocidad.Value
-        self.tiempo_pintar_sig_estado = int((1800 // self.n_filas) * self.variacion_tiempo)
+    def on_spin_speed(self, event):
+        self.time_variation = 50 / self.speed_ctrl.Value
+        self.time_to_draw_next_state = int((1800 // self.num_rows) * self.time_variation)
         return None
 
-    def leer_fich(self):
-        fichero = "lista_filas_a_caer.txt" 
+    def read_file(self):
+        filename = "list_rows_to_fall.txt"
         try:
-            f = open(fichero, "r")
-            lista_de_lineas = []
-            cant_lineas = 0
-            for linea in f.readlines():
-                lista_de_lineas.append(linea)
-                cant_lineas += 1
-            f.close
-            self.cant_lineas = cant_lineas
-            self.lista_de_lineas = lista_de_lineas
-            self.linea_a_leer = 0 
-            self.estado.SetLabel("Puede iniciar la partida.")
-            self.se_puede_empezar = True
+            f = open(filename, "r")
+            lines_list = []
+            line_count = 0
+            for line in f.readlines():
+                lines_list.append(line)
+                line_count += 1
+            f.close()
+            self.line_count = line_count
+            self.lines_list = lines_list
+            self.line_to_read = 0
+            self.status_label.SetLabel("You can start the game.")
+            self.can_start = True
         except:
-            self.estado.SetLabel("Error asegurese de que tiene el archivo f.txt en la misma carpeta que el juego.")
+            self.status_label.SetLabel("Error: make sure the file f.txt is in the same folder as the game.")
         return None
 
-    #Inicia el juego reiniciando la puntación a 0, ponuendo arriba la primer fila del bloque...
-    def on_click_inic_partida(self, event): 
-        self.iniciar_partida()
-    
-    def iniciar_partida(self):
-        if self.se_puede_empezar == True:
-            self.puntuacion.SetLabel("Puntuación: 0")
-            self.lista_jugadas.Clear()
-            self.vaciar_tablero_grafico()
-            self.estado.SetLabel("Partida iniciada, esperando jugada.")
-            self.tablero = Tablero(self.n_filas, self.lista_de_lineas, self.linea_a_leer, self.cant_lineas)
-            self.tablero.leer_linea()
-            self.pintar_tablero()
-            self.esperando_jugada = True
+    # Starts the game by resetting the score to 0 and putting the first block row at the top...
+    def on_click_start_game(self, event):
+        self.start_game()
+
+    def start_game(self):
+        if self.can_start:
+            self.score_label.SetLabel("Score: 0")
+            self.moves_listbox.Clear()
+            self.clear_graphic_board()
+            self.status_label.SetLabel("Game started, waiting for move.")
+            self.board = Board(self.num_rows, self.lines_list, self.line_to_read, self.line_count)
+            self.board.read_line()
+            self.draw_board()
+            self.waiting_for_move = True
         else:
-            self.estado.SetLabel("No se puede empezar no se ha leido el fichero.")
+            self.status_label.SetLabel("Cannot start, file has not been read.")
         return None
 
-    # Pinta en el tablero con la animacion los moviemtos que suceden a la jugada
-    def pintar_jugada(self):
-        self.haciendo_jugada = True
-        if self.tiempo_pintar_sig_estado > 1000: 
-            self.tiempo_pintar_sig_estado = 1000
-        self.falta_pintar_caida_por_bloques = False
-        self.timer.Start(self.tiempo_pintar_sig_estado)
+    # Animates the moves happening on the board
+    def draw_move(self):
+        self.making_move = True
+        if self.time_to_draw_next_state > 1000:
+            self.time_to_draw_next_state = 1000
+        self.need_to_draw_block_fall = False
+        self.timer.Start(self.time_to_draw_next_state)
 
-    # Mueve las fichas hacia abajo y comprueba en cada iteración si se puede eliminar una fila
-    def pintar_siguiente_estado(self, event):
-        self.fin_caida = False
-        while self.fila != -1:  #Si la fila es -1 ya han caido todas
-            if self.fila != self.n_filas - 1 and self.tablero.filas[self.fila].bloques != []:
-                # No tiene sentido intentar hacer que caiga la ultima fila o una vacia
-                while self.tablero.filas[self.fila + 1].bloques == []: 
-                    self.tablero.caida_libre(self.fila)
-                    self.pintar_tablero()
-                    self.fila += 1
-                    if self.fila == self.n_filas - 1:
-                        self.fin_caida = True  #¡
+    # Moves the pieces down and checks each iteration if a row can be cleared
+    def draw_next_state(self, event):
+        self.fall_finished = False
+        while self.row_to_fall != -1:  # If row is -1, all have fallen
+            if self.row_to_fall != self.num_rows - 1 and self.board.rows[self.row_to_fall].blocks != []:
+                # No point trying to make the last or an empty row fall
+                while self.board.rows[self.row_to_fall + 1].blocks == []:
+                    self.board.free_fall(self.row_to_fall)
+                    self.draw_board()
+                    self.row_to_fall += 1
+                    if self.row_to_fall == self.num_rows - 1:
+                        self.fall_finished = True
                         break
                     return None
-                if self.fin_caida == False:
-                    self.tablero.caida_por_bloques(self.fila)
-                    # Si la siguiente fila tiene bloques miro a ver si algún bloque de está puede caer
-                    self.falta_pintar_caida_por_bloques = True
-                    # No lo pinto aún espera a ver si puede caer alguna fila de arriba
-            # Intento hacer que caiga la siguiente fila
-            self.fila -= 1  
-        if self.falta_pintar_caida_por_bloques == True:
-                self.pintar_tablero()
-                self.falta_pintar_caida_por_bloques = False
-                return None
-        se_eliminaron_filas, fila_de_la_ultima_eliminada = self.tablero.intentar_eliminar_filas()
-        if se_eliminaron_filas:
-            if fila_de_la_ultima_eliminada == -1:
-                self.estado.SetLabel("Eliminaste una fila con todos los bloques del mismo color!!")
-            elif fila_de_la_ultima_eliminada == self.n_filas - 1:
-                fila_de_la_ultima_eliminada = self.n_filas - 2
-            self.fila = fila_de_la_ultima_eliminada
-            self.puntuacion.SetLabel("Puntuación: " + str(self.tablero.puntuacion))
-            self.pintar_tablero()
+                if not self.fall_finished:
+                    self.board.block_fall(self.row_to_fall)
+                    # If the next row has blocks, check if any block can fall
+                    self.need_to_draw_block_fall = True
+                    # Do not draw yet; wait to see if upper rows can fall
+            self.row_to_fall -= 1
+        if self.need_to_draw_block_fall:
+            self.draw_board()
+            self.need_to_draw_block_fall = False
+            return None
+        rows_cleared, last_cleared_row = self.board.try_clear_rows()
+        if rows_cleared:
+            if last_cleared_row == -1:
+                self.status_label.SetLabel("You cleared a row with all blocks of the same color!!")
+            elif last_cleared_row == self.num_rows - 1:
+                last_cleared_row = self.num_rows - 2
+            self.row_to_fall = last_cleared_row
+            self.score_label.SetLabel("Score: " + str(self.board.score))
+            self.draw_board()
             return None
         else:
-            self.tablero.leer_linea()
-            self.pintar_tablero()
-        if self.tablero.game_over == True:
-            self.estado.SetLabel("Game over!!!!!!!!!!!")
-            self.esperando_jugada = False
+            self.board.read_line()
+            self.draw_board()
+        if self.board.game_over:
+            self.status_label.SetLabel("Game over!!!!!!!!!!!")
+            self.waiting_for_move = False
         self.timer.Stop()
-        self.haciendo_jugada = False
+        self.making_move = False
         return None
 
-    def pintar_letras(self):
-        self.sizer_letras.Clear(True)
-        for fila in range(self.n_filas):
-            letra = wx.StaticText(self, wx.ID_ANY, chr(ord("A") + fila))
-            letra.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
-            self.sizer_letras.Add(letra, 1, wx.ALIGN_CENTER_HORIZONTAL, 0)
+    def draw_letters(self):
+        self.letters_sizer.Clear(True)
+        for row in range(self.num_rows):
+            letter = wx.StaticText(self, wx.ID_ANY, chr(ord("A") + row))
+            letter.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+            self.letters_sizer.Add(letter, 1, wx.ALIGN_CENTER_HORIZONTAL, 0)
         return None
 
-    def pintar_tablero(self):
-        self.vaciar_tablero_grafico()
-        for fila in range(self.n_filas):
-            for bloque in self.tablero.filas[fila].bloques:
-                self.pintar_bloque(bloque, fila)
-        self.Update()
+    def draw_board(self):
+        self.clear_graphic_board()
+        for row in range(self.num_rows):
+            for block in self.board.rows[row].blocks:
+                self.draw_block(block, row)
+        self.Layout()
         return None
-
-    def pintar_bloque(self, bloque, fila):
-        if bloque.simbolo == "#":
-            #Se pinta el bloque y los separadores
-            for col in range(2 * bloque.inic, (2 * (bloque.inic + bloque.longitud)) -1 ):
-                self.matriz_paneles[fila][col].SetBackgroundColour((0,100,0))
-                self.matriz_paneles[fila][col].Refresh()
-        elif bloque.simbolo == "$":
-            for col in range(2 * bloque.inic, (2 * (bloque.inic + bloque.longitud)) -1 ):
-                self.matriz_paneles[fila][col].SetBackgroundColour(wx.Colour("blue"))
-                self.matriz_paneles[fila][col].Refresh()
+    
+    def draw_block(self, block, row):
+        if block.symbol == "#":
+            for col in range(2 * block.start, (2 * (block.start+ block.length)) -1 ):
+                self.panels_matrix[row][col].SetBackgroundColour((0,100,0))
+                self.panels_matrix[row][col].Refresh()
+        elif block.symbol == "$":
+            for col in range(2 * block.start, (2 * (block.start+ block.length)) -1 ):
+                self.panels_matrix[row][col].SetBackgroundColour(wx.Colour("blue"))
+                self.panels_matrix[row][col].Refresh()
         else:
-            for col in range(2 * bloque.inic, (2 * (bloque.inic + bloque.longitud)) -1 ):
-                self.matriz_paneles[fila][col].SetBackgroundColour(wx.Colour("red"))
-                self.matriz_paneles[fila][col].Refresh()
+            for col in range(2 * block.start, (2 * (block.start+ block.length)) -1 ):
+                self.panels_matrix[row][col].SetBackgroundColour(wx.Colour("red"))
+                self.panels_matrix[row][col].Refresh()
+        return None
+    
+    def get_color_from_letter(self, letter):
+        if letter in ("a", "A"):
+            return wx.Colour(0, 100, 0)  # Dark green
+        elif letter in ("b", "B"):
+            return wx.Colour(0, 0, 255)  # Blue
+        elif letter in ("c", "C"):
+            return wx.Colour(255, 0, 0)  # Red
+        else:
+            return wx.Colour(0, 100, 0)  # Default dark green
+
+    def clear_graphic_board(self):
+        for row in range(self.num_rows):
+            for col in range (19):
+                self.panels_matrix[row][col].SetBackgroundColour("white")
+                self.panels_matrix[row][col].Refresh()
+        return None
+    
+    def remove_graphic_board(self):
+        self.graphic_board = wx.GridBagSizer(2, 0)
         return None
 
-    def llenar_tablero_grafico(self):
-        self.matriz_paneles = []
-        for fila in range(self.n_filas):
-            self.matriz_paneles.append([])
-            for col in range(19):
-                panel = wx.Panel(self, wx.ID_ANY)
-                panel.Bind(wx.EVT_LEFT_DOWN, self.on_click_panel)
-                panel.Bind(wx.EVT_LEFT_UP, self.off_click)
-                panel.SetBackgroundColour(wx.Colour("white"))
-                self.tablero_grafico.Add(panel, (fila, col),(0, 0), wx.EXPAND, 0)
-                panel.Refresh()
-                self.matriz_paneles[fila].append(panel)
-        self.ID_panel0 = self.matriz_paneles[0][0].GetId()
+    def fill_graphic_board(self):        
+        for row in range(self.num_rows):
+            self.panels_matrix.append([])
+            for col in range(19):                
+                block_panel = wx.Panel(self, wx.ID_ANY)
+                block_panel.Bind(wx.EVT_LEFT_DOWN, self.on_click_panel)
+                block_panel.Bind(wx.EVT_LEFT_UP, self.off_click)
+                block_panel.SetBackgroundColour(wx.Colour("white"))
+                self.graphic_board.Add(block_panel, (row, col),(0, 0), wx.EXPAND, 0)
+                block_panel.Refresh()
+                self.panels_matrix[row].append(block_panel)
+    
+        self.ID_panel0 = self.panels_matrix[0][0].GetId()
 
-        for fila in range(self.n_filas):
-            self.tablero_grafico.AddGrowableRow(fila)  
-        if self.anadir_col:
+        for row in range(self.num_rows):
+            self.graphic_board.AddGrowableRow(row)
+
+        if self.add_columns:
             for col in range(19):
                 if col % 2 == 0: 
-                    self.tablero_grafico.AddGrowableCol(col)
-        return None
-
-    def vaciar_tablero_grafico(self):
-        for fila in range(self.n_filas):
-            for col in range (19):
-                self.matriz_paneles[fila][col].SetBackgroundColour("white")
-                self.matriz_paneles[fila][col].Refresh()
-        return None
-
-    def eliminar_tablero_grafico(self):
-        for fila in range(self.n_filas):
-            self.tablero_grafico.RemoveGrowableRow(fila)  
-        self.tablero_grafico.Clear(True)
+                    self.graphic_board.AddGrowableCol(col)
         return None
 
     def on_click_panel(self, event):
-        if self.esperando_jugada == True:
-            if self.haciendo_jugada == False:
+        if self.waiting_for_move == True:
+            if self.making_move == False:
                 self.X = event.GetX()
-                pos_panel_pulsado = abs(event.GetId() - self.ID_panel0)
-                self.n_letra, self.num_int = self.obtener_primera_parte_jugada(pos_panel_pulsado)
-                if self.matriz_paneles[self.n_letra][self.num_int].GetBackgroundColour() == (255, 255, 255, 255):
-                    self.estado.SetLabel("Ratón pulsado, sueltelo fuera del tablero para anular la jugada vacia.")
-                    self.letra = "-"
+                clicked_panel_pos = abs(event.GetId() - self.ID_panel0)
+                self.clicked_row_index, self.clicked_column_index = self.get_position_of_the_move(clicked_panel_pos)
+                if self.panels_matrix[self.clicked_row_index][self.clicked_column_index].GetBackgroundColour() == (255, 255, 255, 255):
+                    self.status_label.SetLabel("Mouse pressed. Release it outside the board to cancel the empty move.")
+                    self.letter = "-"
                     self.num_char = "-"
                 else:
-                    self.estado.SetLabel("Suelte el bloque sin moverlo o fuera del tablero para anular la jugada.")
-                    self.letra = chr(65 + self.n_letra)
-                    self.num_char = str(self.num_int//2)
+                    self.status_label.SetLabel("Release without moving or off the board to cancel the movement.")
+                    self.letter = chr(65 + self.clicked_row_index)
+                    self.num_char = str(self.clicked_column_index//2)
             else:
-                self.estado.SetLabel("Espere a que la jugada acabe para hacer otra.")
+                self.status_label.SetLabel("Wait for the move to finish before making another one.")
         else:
             try:
-                if self.tablero.game_over == True:
-                    self.estado.SetLabel("EMPIEZE OTRA PARTIDA, ESTA YA HA TERMINADO!!!!")
+                if self.board.game_over == True:
+                    self.status_label.SetLabel("Start another game, this one is already over!!!")
             except:
-                self.estado.SetLabel("No hay una partida empezada.")
+                self.status_label.SetLabel("There is no game started.")
         return None
-
-    def obtener_primera_parte_jugada(self, pos_panel_pulsado):
-        n_letra = pos_panel_pulsado // 19
-        num = pos_panel_pulsado % 19
-        return n_letra, num
-
+    
     def off_click(self, event):
-        if self.esperando_jugada == True:
-            if self.haciendo_jugada == False:
+        if self.waiting_for_move == True:
+            if self.making_move == False:
                 if self.num_char == "-":
-                    sentido = "-"
+                    direction = "-"
                 else:
-                    pos_panel_soltado = abs(event.GetId() - self.ID_panel0)
-                    n_letra, num_int = self.obtener_primera_parte_jugada(pos_panel_soltado)
-                    if num_int != self.num_int:
-                        if num_int > self.num_int:
-                            sentido = ">"
+                    released_panel_position = abs(event.GetId() - self.ID_panel0)
+                    _, column_index = self.get_position_of_the_move(released_panel_position)
+                    # If the mouse leaves the panel and enters another one,
+                    # the direction of movement is determined by the relative position 
+                    # (left or right) of the other panel.
+                    if column_index != self.clicked_column_index:
+                        if column_index > self.clicked_column_index:
+                            direction = ">"
                         else:
-                            sentido = "<"
+                            direction = "<"
                     else:
+                        # Depend on the final mouse position in the same panel
+                        # the direction of movement is choosen
                         if event.GetX() > self.X:
-                            sentido = ">"
+                            direction = ">"
+
                         elif event.GetX() < self.X:
-                            sentido = "<"
+                            direction = "<"
                         else:
-                            sentido =""
-                jugada = self.letra + self.num_char + sentido
-                self.realizar_jugada_raton(jugada)
-            return None
-        else:
-            return None
-
-    def realizar_jugada_raton(self, jugada):#Ordeno los bloques segun su inic
-        if self.esperando_jugada:
-            if self.tablero.game_over == False:
-                if self.tablero.validar_jugada_y_realizarla(jugada) == 0:
-                    self.lista_jugadas.Insert(jugada, 0)
-                    if jugada != "---":
-                        self.fila = ord(jugada[0]) - 65
+                            direction =""
+                play = self.letter + self.num_char + direction
+                self.perform_mouse_move(play)
+        return None
+    
+    def get_position_of_the_move(self, clicked_panel_position):
+        row_index = clicked_panel_position // 19
+        column_index = clicked_panel_position % 19
+        return row_index, column_index
+    
+    def perform_mouse_move(self, move):
+        if self.waiting_for_move:
+            if self.board.game_over == False:
+                if self.board.validate_move_and_execute(move) == 0:
+                    self.moves_listbox.Insert(move, 0)
+                    if move != "---":
+                        self.row_to_fall = ord(move[0]) - 65
                     else:
-                        self.fila = 0
-                    self.pintar_tablero()
-                    self.pintar_jugada()  # Hace una jugada y la pinta
+                        self.row_to_fall = 0
+                    self.draw_board()
+                    self.draw_move()  
                 else:
-                    self.estado.SetLabel(self.tablero.validar_jugada_y_realizarla(jugada))
+                    self.status_label.SetLabel(self.board.validate_move_and_execute(move))
             else:
-                self.estado.SetLabel("La partida ya se ha acabado")
+                self.status_label.SetLabel("The game is over")
         else:
-            self.estado.SetLabel("No hay un juego iniciado, empieza uno.")
+            self.status_label.SetLabel("No game started, please start one.")
         return None
-
-    def on_spin_filas(self, event):
-        
-        self.esperando_jugada = False
-        self.iniciar_partida()
-        self.eliminar_tablero_grafico()
-        self.n_filas = self.ins_n_filas.Value
-        self.pintar_letras()
-        self.llenar_tablero_grafico()
-        self.esperando_jugada = False
-        self.estado.SetLabel("Nº de filas modificado revise si el tamaño de la pantalla es adecuado.")
+    
+    def on_spin_rows(self, event):
+        self.waiting_for_move = False
+        self.start_game()
+        self.remove_graphic_board()
+        self.num_rows = self.rows_ctrl.GetValue()
+        self.draw_letters()
+        self.fill_graphic_board()
+        self.waiting_for_move = False
         self.Layout()
-        # Cuántas más filas más rápido y cuántas menos más lento
-        self.tiempo_pintar_sig_estado = 1800 // self.n_filas  
+        self.time_to_draw_next_state= 1800 // self.num_rows
         return None
-
-
+    
 class MyApp(wx.App):
     def OnInit(self):
         self.frame = MyFrame(None, wx.ID_ANY, "")
@@ -373,314 +380,292 @@ class MyApp(wx.App):
         self.frame.Show()
         return True
 
-class Tablero():
-    def __init__(self, n_filas, lista_de_lineas, linea_a_leer, cant_lineas):
-        self.n_filas = n_filas
-        self.lista_de_lineas = lista_de_lineas
-        self.linea_a_leer = linea_a_leer
-        self.cant_lineas = cant_lineas
-        self.filas = []
-        for i in range(self.n_filas):
-            self.filas.append(Fila())
+class Board():
+    def __init__(self, num_rows, lines_list, line_to_read, total_lines):
+        self.num_rows = num_rows
+        self.lines_list = lines_list
+        self.line_to_read = line_to_read
+        self.total_lines = total_lines
+        self.rows = []
+        for _ in range(self.num_rows):
+            self.rows.append(Row())
         self.game_over = False
-        self.puntuacion = 0
+        self.score = 0
         return None
 
-    def leer_linea(self):
-        if self.filas[0].bloques != []:
-            self.game_over = True 
+    def read_line(self):
+        if self.rows[0].blocks != []:
+            self.game_over = True
             return None
         else:
-            if self.cant_lineas - 1 == self.linea_a_leer:
-                self.linea_a_leer = 0
-            linea = self.lista_de_lineas[self.linea_a_leer]
-            if len(linea) > 11:  #Por si se pone más de 10 cosas en una linea
-                linea = linea[0:10]
-                print("Asegurese de que el fichero es correcto!!! (hay más de 10 caracteres en esa fila)")
-            if ord(linea[len(linea) - 1]) != 10:
-                linea += chr(10)  
-            self.linea_a_leer += 1
-            self.colocar_linea_leida(linea)
+            if self.total_lines - 1 == self.line_to_read:
+                self.line_to_read = 0
+            line = self.lines_list[self.line_to_read]
+            if len(line) > 11:  # Just in case there are more than 10 characters in a line
+                line = line[0:10]
+                print("Make sure the file is correct!!! (More than 10 characters in a row)")
+            if ord(line[len(line) - 1]) != 10:
+                line += chr(10)  # Add newline character if missing
+            self.line_to_read += 1
+            self.place_read_line(line)
             return None
 
-    # Añade la linea leida del fichero al tablero con sus bloques
-    def colocar_linea_leida(self, linea):
+    # Adds the read line from the file to the board with its blocks
+    def place_read_line(self, line):
         pos = 0
-        while pos < (len(linea) - 1):
-            #No me interesa el salto de linea que está en la última posición: linea[len(linea) - 1]
-            if linea[pos] != " ":
-                longitud = 0
-                pos_inic = pos
-                if linea[pos] == "b" or linea[pos] == "B":
-                    caracter = linea[pos]
-                    while caracter == linea[pos]:
-                        if longitud == 0:
-                            inic = pos_inic #La posicion inicial es la primera vez que el caracter es b o B
-                        longitud += 1  #Si en la siguiente posición el simbolo es el mismo el bloque tiene más longitud
-                        if pos == len(linea) - 1:#No interesa la última posición porque es el salto de línea
+        while pos < (len(line) - 1):
+            # We don't care about the newline character at the end: line[len(line) - 1]
+            if line[pos] != " ":
+                length = 0
+                start_pos = pos
+                if line[pos] in ("b", "B"):
+                    char = line[pos]
+                    while char == line[pos]:
+                        if length == 0:
+                            start_pos = start_pos  # initial position of the block
+                        length += 1
+                        if pos == len(line) - 1:
                             break
                         pos += 1
-                    simbolo = "$" #Si ha pasado por este bucle el simbolo del bloque es $
-                elif linea[pos] == "c" or linea[pos] == "C":
-                    caracter = linea[pos]
-                    while caracter == linea[pos]:
-                        if longitud == 0:
-                            inic = pos_inic #La posicion inicial es la primera vez que el caracter es b o B
-                        longitud += 1 #Si en la siguiente posición el simbolo es el mismo el bloque tiene más longitud
-                        if pos == len(linea) - 1:#No interesa la última posición porque es el salto de línea
+                    symbol = "$"  # blocks starting with b or B get symbol $
+                elif line[pos] in ("c", "C"):
+                    char = line[pos]
+                    while char == line[pos]:
+                        if length == 0:
+                            start_pos = start_pos
+                        length += 1
+                        if pos == len(line) - 1:
                             break
                         pos += 1
-                    simbolo = "%" #Si ha pasado por este bucle el simbolo del bloque es %
-                else: #Si lo que se esta leyendo no es una b o B entonces debe ser una a o A y se hara algo parecido a si es b o B
-                    caracter = linea[pos]
-                    while caracter == linea[pos]:
-                        if longitud == 0:
-                            inic = pos_inic
-                        longitud += 1
-                        if pos == len(linea) - 1:
+                    symbol = "%"  # blocks starting with c or C get symbol %
+                else:  # for a or A (or other), treated similarly
+                    char = line[pos]
+                    while char == line[pos]:
+                        if length == 0:
+                            start_pos = start_pos
+                        length += 1
+                        if pos == len(line) - 1:
                             break
                         pos += 1
-                    simbolo = "#"
-                self.filas[0].anadir_bloque(inic, longitud, simbolo)
+                    symbol = "#"  # default symbol
+                self.rows[0].add_block(start_pos, length, symbol)
             else:
                 pos += 1
         return None
 
-    # Se informa de sintaxis en la jugada (que sea --- o una letra mayuscula entre A y L, un numero positivo menor que 
-    # el numero de filas y un simbolo > o < que indique hacia donde se quiere mover el bloque) y si se pueden realizar
-    def validar_jugada_y_realizarla(self, jugada): 
-        if len(jugada) == 3:                      
-            if jugada == "---":
+    # Validates the move syntax (--- or a capital letter A-L, a positive number < num_rows and a symbol < or >)
+    # and if the move can be made
+    def validate_move_and_execute(self, move):
+        if len(move) == 3:
+            if move == "---":
                 return 0
-            else:  
-                #Paso la fila de letra mayuscula a numero
-                fila = (int(ord(jugada[0]) - 65)) 
-                if fila < 0 or fila > self.n_filas-1:
-                    return "Error de sintaxis en la primera posición, debe ser una fila."
-                try:
-                    casilla_a_mover = int(jugada[1]) 
-                except:                              
-                    return "Error de sintaxis en la segunda posición, debe ser un nº."
-                casilla = Bloque(casilla_a_mover, 1, "X") 
-                #Se crea un bloque de longitud uno que se usa para ver si hay un bloque en esa posicion
-                hay_bloque_en_casilla = False 
-                pos = 0 
-                for bloque in self.filas[fila].bloques:
-                    if bloque.comparten_posicion_bloques(casilla) == True:
-                        hay_bloque_en_casilla = True
-                        break 
-                    pos += 1  
-                if hay_bloque_en_casilla == False:
-                    return "Error, no hay un bloque en esa celda."
-                else:
-                    if jugada[2] == "<":
-                        if pos == 0:
-                            if self.filas[fila].bloques[pos].inic == 0:
-                                return "Error el bloque está pegado al borde de la izquierda."
-                            else: 
-                                # Para mover un bloque que sea el primero y que no este pegado al borde izquierdo se le pega a ese borde
-                                self.filas[fila].bloques[pos].inic = 0
-                                return 0
-                        else:
-                            # Se mueve el bloque si se puede
-                            return self.realizar_jugada_izq(fila, pos)
-                    elif jugada[2] == ">": 
-                        if len(self.filas[fila].bloques) == pos + 1:
-                            if self.filas[fila].bloques[pos].inic + self.filas[fila].bloques[pos].longitud - 1 == 9:
-                                return "Error el borde está pegado al borde de la  derecha."
-                            else:
-                                self.filas[fila].bloques[pos].inic = 10 - self.filas[fila].bloques[pos].longitud
-                                return 0
-                        else:
-                                return self.realizar_jugada_der(fila, pos)
-                    else:
-                        return "No se ha dectectado movimiento."
-        else:
-            return "Debes mover el ratón antes de dejar de pulsarlo, para realizar jugadas."
-
-    def realizar_jugada_izq(self, fila, pos):
-        # Comprueba que los bloques contiguos no esten pegados
-        if ((self.filas[fila].bloques[pos-1].inic + self.filas[fila].bloques[pos-1].longitud) -
-            self.filas[fila].bloques[pos].inic)== 0: 
-            return "Error, el bloque está pegado a otro por la izquierda."
-        else:  
-            # Muevo el bloque a la izquierda hasta pegarlo con el anterior
-            self.filas[fila].bloques[pos].inic = (self.filas[fila].bloques[pos - 1].inic +
-                                                  self.filas[fila].bloques[pos - 1].longitud)
-            return 0
-
-    # Lo mismo de arriba, pero con la derecha
-    def realizar_jugada_der(self, fila, pos):
-        if (self.filas[fila].bloques[pos + 1].inic - (self.filas[fila].bloques[pos].inic +
-            self.filas[fila].bloques[pos].longitud)) == 0:
-            return "Error, el bloque esta pegado a otro por la derecha."
-        else:
-            self.filas[fila].bloques[pos].inic = (self.filas[fila].bloques[pos + 1].inic -
-                                                  self.filas[fila].bloques[pos].longitud)
-            return 0
-
-    def caida(self, fila):
-        while self.filas[fila+1].bloques == []: 
-            #Si la fila de abajo no tiene bloques cae directamente
-            self.caida_libre(fila)
-            fila += 1
-            if fila == self.n_filas-1:
-                return None #Ya se ha acabado la caida se llega a la ultima fila
-        self.caida_por_bloques(fila) 
-        #Si ha hecho caida libre y no está en la último fila miro a ver si algún bloque puede caer
-        return None
-
-    def caida_libre(self, fila):
-        for bloque in self.filas[fila].bloques:
-            # Copia la fila de arriba en la de abajo bloque a bloque
-            self.filas[fila + 1].bloques.append(bloque)
-        # Borra los bloques de la fila de arriba
-        self.filas[fila].bloques = [] 
-        return None
-
-    def caida_por_bloques(self, fila):
-        pos_bloque = 0
-        # Guardo los bloques que caen para borrarles de la fila de la que caen
-        bloques_a_eliminar = []  
-        for bloque in self.filas[fila].bloques:
-            if self.puede_caer(bloque, fila):
-                bloques_a_eliminar, pos_nueva = self.caida_de_bloque(fila, bloque, pos_bloque, bloques_a_eliminar)
-                fila_bloque = fila + 1 #La fila_bloque se usa para ver si el bloque puede caer a la siguiente fila
-                if fila_bloque != self.n_filas-1:
-                    while self.puede_caer(bloque, fila_bloque): #Se mira se el bloque puede caer aún más filas
-                        bloques_a_eliminar, pos_nueva = self.caida_de_bloque(fila_bloque, bloque, pos_nueva, bloques_a_eliminar)
-                        fila_bloque += 1  #Se mira si el bloque puede seguir cayendo y se apunta el bloque a eliminar
-                        if fila_bloque == self.n_filas-1:
-                            break
-            pos_bloque += 1
-        self.elimina_bloques(bloques_a_eliminar) 
-        return None
-
-    def puede_caer(self, bloque_arriba, fila):
-        puede_caer = True
-        for bloque_debajo in self.filas[fila + 1].bloques:
-            # Si el bloque comparte posición con uno de debajo entonces no puede caer
-            if bloque_arriba.comparten_posicion_bloques(bloque_debajo) == True:
-                puede_caer = False 
-                break
-        return puede_caer
-    
-    def elimina_bloques(self, bloques_a_eliminar):
-
-        pos = 0 
-        # Cantidad de bloques eliminados por fila
-        cant_bloques_eliminados = [0]*self.n_filas 
-        for numero in bloques_a_eliminar:
-            # Si la posición es par se lee la fila del bloque
-            if pos % 2 == 0: 
-                fila = numero
-            # Si es impar se lee su posicion en la fila
             else:
-                pos_bloque = numero 
-                pos_bloque -= cant_bloques_eliminados[fila]
-                # La posición del bloque en la lista de bloques cambia si ya se han elimnado bloques en esa fila
-                # disminuye por cada bloque eliminado en la fila ya que se empieza eliminando de izq a der
-                self.filas[fila].bloques.pop(pos_bloque)
-                self.filas[fila].bloques.sort()
-                cant_bloques_eliminados[fila] += 1 
-            pos += 1                            
-        return None                                
-
-    def caida_de_bloque(self, fila, bloque, pos_bloque, bloques_a_eliminar):
-        self.filas[fila + 1].bloques.append(bloque)
-        bloques_a_eliminar.append(fila)
-        bloques_a_eliminar.append(pos_bloque)
-        #Ordeno los bloques en la fila
-        pos_bloque = self.filas[fila + 1].ordenar_bloques() 
-        return bloques_a_eliminar, pos_bloque      
-
-    def contar_puntos_en_tablero(self):
-        puntos = 0
-        for filas in self.filas:
-            for bloque in filas.bloques:
-                # Suma puntos según la longitud de cada bloque (las casillas que ocupan)
-                puntos += bloque.longitud 
-        return puntos
-
-    def intentar_eliminar_filas(self):
-        #Se usara para saber que fila eliminar en caso de ser necesario
-        pos_fila = 0 
-        for fila in self.filas:
-            if fila.bloques != []: 
-                bloques_con_mismo_simbolo = True 
-                simbolo_bloques = fila.bloques[0].simbolo
-                # Sera una cadena con las posiciones de las casillas de los bloques de la fila del 0 al 9
-                casillas_ocupadas = ""
-                for bloque in fila.bloques:
-                    if bloque.simbolo != simbolo_bloques and bloques_con_mismo_simbolo:
-                        bloques_con_mismo_simbolo = False
-                    casillas_ocupadas += bloque.casillas_bloque()
-                # Si hay 10 casillas ocupadas entonces la fila esta llena y se debe borrar
-                if len(casillas_ocupadas) == 10: 
-                    self.puntuacion += 10
-                    self.filas[pos_fila].bloques = [] 
-                    #Si los bloques tienen el mismo simbolo se borra el tablero y se suman los puntos
-                    if bloques_con_mismo_simbolo == True:
-                        self.puntuacion += self.contar_puntos_en_tablero()
-                        self.filas = []
-                        for i in range(self.n_filas):
-                            self.filas.append(Fila())
-                        return True, -1 # Tras elimina el tablero no se sigue intentando eliminar mas filas
+                # Convert capital letter row to number
+                row = ord(move[0]) - 65
+                if row < 0 or row > self.num_rows - 1:
+                    return "Syntax error in first position: must be a row."
+                try:
+                    cell_to_move = int(move[1])
+                except:
+                    return "Syntax error in second position: must be a number."
+                cell = Block(cell_to_move, 1, "X")
+                # Create a block of length 1 to check if there is a block at that position
+                block_found = False
+                pos = 0
+                for block in self.rows[row].blocks:
+                    if block.share_position_with(cell):
+                        block_found = True
+                        break
+                    pos += 1
+                if not block_found:
+                    return "Error, no block in that cell."
+                else:
+                    if move[2] == "<":
+                        if pos == 0:
+                            if self.rows[row].blocks[pos].start == 0:
+                                return "Error, block is at the left edge."
+                            else:
+                                # Move block to left edge
+                                self.rows[row].blocks[pos].start = 0
+                                return 0
+                        else:
+                            return self.move_block_left(row, pos)
+                    elif move[2] == ">":
+                        if len(self.rows[row].blocks) == pos + 1:
+                            if self.rows[row].blocks[pos].start + self.rows[row].blocks[pos].length - 1 == 9:
+                                return "Error, block is at the right edge."
+                            else:
+                                self.rows[row].blocks[pos].start = 10 - self.rows[row].blocks[pos].length
+                                return 0
+                        else:
+                            return self.move_block_right(row, pos)
                     else:
-                        return True, pos_fila
-            pos_fila += 1 #Miro si se puede eliminar la siguiente fila
+                        return "No movement detected."
+        else:
+            return "You must move the mouse before releasing it to make moves."
+
+    def move_block_left(self, row, pos):
+        # Check that blocks are not adjacent on the left
+        if ((self.rows[row].blocks[pos - 1].start + self.rows[row].blocks[pos - 1].length) -
+            self.rows[row].blocks[pos].start) == 0:
+            return "Error, block is stuck to another on the left."
+        else:
+            # Move block left until it touches the previous block
+            self.rows[row].blocks[pos].start = (self.rows[row].blocks[pos - 1].start +
+                                                self.rows[row].blocks[pos - 1].length)
+            return 0
+
+    def move_block_right(self, row, pos):
+        # Same as above but for the right
+        if (self.rows[row].blocks[pos + 1].start - (self.rows[row].blocks[pos].start +
+            self.rows[row].blocks[pos].length)) == 0:
+            return "Error, block is stuck to another on the right."
+        else:
+            self.rows[row].blocks[pos].start = (self.rows[row].blocks[pos + 1].start -
+                                                self.rows[row].blocks[pos].length)
+            return 0
+
+    def fall(self, row):
+        while self.rows[row + 1].blocks == []:
+            # If the row below has no blocks, the blocks fall directly
+            self.free_fall(row)
+            row += 1
+            if row == self.num_rows - 1:
+                return None  # fall has finished at the last row
+        self.block_fall(row)
+        return None
+
+    def free_fall(self, row):
+        for block in self.rows[row].blocks:
+            # Copy blocks from current row to the row below
+            self.rows[row + 1].blocks.append(block)
+        # Clear blocks from the current row
+        self.rows[row].blocks = []
+        return None
+
+    def block_fall(self, row):
+        block_pos = 0
+        blocks_to_remove = []
+        for block in self.rows[row].blocks:
+            if self.can_fall(block, row):
+                blocks_to_remove, new_pos = self.fall_block(row, block, block_pos, blocks_to_remove)
+                next_row = row + 1
+                if next_row != self.num_rows - 1:
+                    while self.can_fall(block, next_row):
+                        blocks_to_remove, new_pos = self.fall_block(next_row, block, new_pos, blocks_to_remove)
+                        next_row += 1
+                        if next_row == self.num_rows - 1:
+                            break
+            block_pos += 1
+        self.remove_blocks(blocks_to_remove)
+        return None
+
+    def can_fall(self, block_above, row):
+        can_fall = True
+        for block_below in self.rows[row + 1].blocks:
+            if block_above.share_position_with(block_below):
+                can_fall = False
+                break
+        return can_fall
+
+    def remove_blocks(self, blocks_to_remove):
+        pos = 0
+        removed_blocks_count = [0] * self.num_rows
+        for number in blocks_to_remove:
+            if pos % 2 == 0:
+                row = number
+            else:
+                block_pos = number
+                block_pos -= removed_blocks_count[row]
+                self.rows[row].blocks.pop(block_pos)
+                self.rows[row].blocks.sort()
+                removed_blocks_count[row] += 1
+            pos += 1
+        return None
+
+    def fall_block(self, row, block, block_pos, blocks_to_remove):
+        self.rows[row + 1].blocks.append(block)
+        blocks_to_remove.append(row)
+        blocks_to_remove.append(block_pos)
+        block_pos = self.rows[row + 1].sort_blocks()
+        return blocks_to_remove, block_pos
+
+    def count_points_on_board(self):
+        points = 0
+        for row in self.rows:
+            for block in row.blocks:
+                points += block.length
+        return points
+
+    def try_clear_rows(self):
+        pos_row = 0
+        for row in self.rows:
+            if row.blocks != []:
+                all_same_symbol = True
+                symbol = row.blocks[0].symbol
+                occupied_cells = ""
+                for block in row.blocks:
+                    if block.symbol != symbol and all_same_symbol:
+                        all_same_symbol = False
+                    occupied_cells += block.block_cells()
+                if len(occupied_cells) == 10:
+                    self.score += 10
+                    self.rows[pos_row].blocks = []
+                    if all_same_symbol:
+                        self.score += self.count_points_on_board()
+                        self.rows = []
+                        for _ in range(self.num_rows):
+                            self.rows.append(Row())
+                        return True, -1
+                    else:
+                        return True, pos_row
+            pos_row += 1
         return False, -1
 
-class Fila():
+class Row():
 
     def __init__(self):
-        self.bloques = []
+        self.blocks = []
 
-    def anadir_bloque(self, inic, longitud, simbolo):
-        #Ordeno los bloques segun su inic
-        self.bloques.append(Bloque(inic, longitud, simbolo))
+    def add_block(self, start, length, symbol):
+        self.blocks.append(Block(start, length, symbol))
         return None
 
-    # Ordena los bloques de una fila segun sus posiciones iniciales y devuelvo la posicion del último bloque 
-    def ordenar_bloques(self): 
-        pos_nueva = 0         
-        for bloque in self.bloques:
-            if bloque.inic > self.bloques[len(self.bloques) - 1].inic or pos_nueva == len(self.bloques) - 1:
-                break    
-            pos_nueva += 1
-        self.bloques.sort() 
-        return pos_nueva
+    def sort_blocks(self):
+        pos_new = 0
+        for block in self.blocks:
+            if block.start > self.blocks[-1].start or pos_new == len(self.blocks) - 1:
+                break
+            pos_new += 1
+        self.blocks.sort()
+        return pos_new
 
-class Bloque():
+class Block():
 
-    def __init__(self, inic, longitud, simbolo):
-        self.inic = inic
-        self.longitud = longitud
-        self.simbolo = simbolo
+    def __init__(self, start, length, symbol):
+        self.start = start
+        self.length = length
+        self.symbol = symbol
         return None
 
-    # Devuelve las posiciones de las casillas en las que esta el bloque en un string
-    def casillas_bloque(self): 
-        casillas_del_bloque = ""
-        for longitud in range(self.longitud):
-            casillas_del_bloque += str((self.inic + longitud))
-        return casillas_del_bloque
+    def block_cells(self):
+        cells = ""
+        for i in range(self.length):
+            cells += str(self.start + i)
+        return cells
 
-    # Devuelve True si comparten posicion los bloques y False si no lo hacen
-    def comparten_posicion_bloques(self, bloque_debajo): 
-        comparten_posicion = False
-        #Este es un string que tiene todas las casillas en las que esta el bloque de arriba
-        casillas_bloque_de_arriba = self.casillas_bloque() 
-        for longitud in range(bloque_debajo.longitud):
-            # Si hay alguna casilla que comparten entonces comparten posicion
-            if casillas_bloque_de_arriba.find(str(bloque_debajo.inic + longitud)) != -1:
-                comparten_posicion = True
-                break #No es necesario comprobar mas ya se sabe que comparten una posicion
-        return comparten_posicion
+    def share_position_with(self, block_below):
+        shared = False
+        cells_above = self.block_cells()
+        for i in range(block_below.length):
+            if cells_above.find(str(block_below.start + i)) != -1:
+                shared = True
+                break
+        return shared
 
     def __lt__(self, other):
-        return self.inic < other.inic
-                # Suma puntos según la longitud de cada bloque (las casillas que ocupan)
+        return self.start < other.start
+
 if __name__ == "__main__":
     app = MyApp(0)
     app.MainLoop()

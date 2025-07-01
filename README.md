@@ -1,23 +1,19 @@
 # Deslizator
 
-Este repositorio se basa en la práctica de paradigmas de programación del grado en ingeniería informática de la universidad de Valladolid. 
-Este práctica es un videojuego de caida de bloques estilo tetris realizado en python con ayuda de la librería wxPython, se añade un video como ejemplo de una 
-ejecución del juego.
+This repository is based on a programming paradigms practice for the Computer Science degree at the University of Valladolid.  
+This practice is a block-falling video game in the style of Tetris, made in Python with the help of the wxPython library. A video example of a game execution is included.
 
-## Reglas del juego
+## Game Rules
 
-El juego se basa en que cada turno se crean unos bloques en la primera línea y el jugador puede hacer una jugada moviendo un bloque con el ratón hasta que colisione con otro bloque o una pared del juego o 
-pulasar en una casilla vacia y que caiga la línea de arriba. El objetivo del juego es obtener la mayor puntación antes de que se acabe lo que ocurre cuando no se puede insetar una nueva fila arriba. 
-Para ganar puntuación se deben eliminar filas lo que se consigue llenando una fila con bloque y se gana 10 puntos, además si los bloques de la fila son del mismo color se elimina todo el tablero y se 
-ganaran tantos puntos como casillas ocupen los bloques en el tablero.
+The game works as follows: each turn, blocks are created on the first line, and the player can make a move by dragging a block with the mouse until it collides with another block or a game wall, or by clicking on an empty cell to drop the line above.  
+The objective of the game is to achieve the highest score before the game ends, which happens when a new row cannot be inserted at the top.  
+To score points, rows must be eliminated by filling an entire row with blocks, which awards 10 points. Additionally, if the blocks in a row are all the same color, the entire board is cleared and the player earns points equal to the number of occupied cells on the board.
 
-## Ayuda en el juego
+## Game Help
 
-En la parte inferior derecha aparece un mensaje de ayuda que indica en que situación del juego se está.
+At the bottom right corner, a help message appears indicating the current state of the game.
 
-## Otras opciones
+## Other Options
 
-EL juego permite aumentar el tamaño de filas o cambiar la velociadad de la animación cambiando los valores correspondientes. También, los bloques que caen en cada línea se basan en una secuencia de bloques
-que están representados en el fichero de texto lista_filas_a_caer.txt, que se puede modificar, y es necesario para ejecutar el juego como la librería wxPython y python. 
-Y si se fijan en el juego se puede ver una lista de jugadas está es pedida para la práctica de la asignatura y se basa en los comandos por teclados que en las primeras versiones
-se usan para realizar las jugadas del juego antes de que se hiciera la interfaz gráfica y el juego está diselñado a partir de estos comandos.
+The game allows increasing the number of rows or changing the animation speed by modifying the corresponding values. Also, the blocks that fall in each line are based on a sequence represented in the text file `list_rows_to_fall.txt`, which can be modified. This file, along with the wxPython library and Python itself, is necessary to run the game.  
+If you look closely at the game, you can see a list of moves. This is requested for the course practice and is based on keyboard commands that were used in the initial versions to make moves before the graphical interface was created. The game is designed around these commands.
