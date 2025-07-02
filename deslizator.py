@@ -13,6 +13,7 @@ To make moves, you need to drag blocks to the desired side or click on an empty 
 """
 
 import wx
+from game_logic import Board
 
 class MyFrame(wx.Frame):
 
@@ -20,7 +21,7 @@ class MyFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.SetSize((650, 450))
+        self.SetSize((800, 550))
         self.SetTitle("Deslizator")
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         
@@ -68,8 +69,12 @@ class MyFrame(wx.Frame):
         right_sizer = wx.BoxSizer(wx.HORIZONTAL)
         top_sizer.Add(right_sizer, 3, wx.ALL | wx.EXPAND, 5)
 
+        self.letters_panel = wx.Panel(self)  
         self.letters_sizer = wx.BoxSizer(wx.VERTICAL)
-        right_sizer.Add(self.letters_sizer, 0, wx.BOTTOM | wx.TOP | wx.EXPAND, 10)
+        self.letters_panel.SetSizer(self.letters_sizer)
+        bg_color = self.GetBackgroundColour()  # Get the frame's background color
+        self.letters_panel.SetBackgroundColour(bg_color)
+        right_sizer.Add(self.letters_panel, 0, wx.ALL | wx.EXPAND, 5)
 
         self.num_rows = self.rows_ctrl.GetValue()
         self.can_start = False
@@ -80,9 +85,11 @@ class MyFrame(wx.Frame):
 
         self.board_and_numbers_sizer = wx.BoxSizer(wx.VERTICAL)
         right_sizer.Add(self.board_and_numbers_sizer, 3, wx.ALL | wx.EXPAND, 5)
+        self.graphic_panel = wx.Panel(self)
         self.graphic_board = wx.GridBagSizer(2, 0)
-        self.board_and_numbers_sizer.Add(self.graphic_board, 10, wx.EXPAND, 1)
+        self.graphic_panel.SetSizer(self.graphic_board)
 
+        self.board_and_numbers_sizer.Add(self.graphic_panel, 10, wx.EXPAND | wx.ALL, 1)
         self.add_columns = True  # Prevent adding/removing growable columns again when changing number of rows
         self.fill_graphic_board()
         self.add_columns = False
@@ -110,6 +117,8 @@ class MyFrame(wx.Frame):
         self.Bind(wx.EVT_TEXT_ENTER, self.on_spin_rows, self.rows_ctrl)
         self.Bind(wx.EVT_SPINCTRL, self.on_spin_speed, self.speed_ctrl)
         self.Bind(wx.EVT_TEXT, self.on_spin_speed, self.speed_ctrl)
+        self.graphic_panel.Bind(wx.EVT_LEFT_DOWN, self.on_click_panel)
+        self.graphic_panel.Bind(wx.EVT_LEFT_UP, self.off_click)
         self.waiting_for_move = False
         self.making_move = False
         self.time_to_draw_next_state = 1800 // self.num_rows  # More rows = faster, fewer rows = slower
@@ -209,11 +218,14 @@ class MyFrame(wx.Frame):
         return None
 
     def draw_letters(self):
-        self.letters_sizer.Clear(True)
+        self.letters_sizer.Clear(True)  # Clear previous letters
+
         for row in range(self.num_rows):
-            letter = wx.StaticText(self, wx.ID_ANY, chr(ord("A") + row))
+            letter = wx.StaticText(self.letters_panel, wx.ID_ANY, chr(ord("A") + row))  
             letter.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
             self.letters_sizer.Add(letter, 1, wx.ALIGN_CENTER_HORIZONTAL, 0)
+
+        self.letters_sizer.Layout()  # Refresh layout 
         return None
 
     def draw_board(self):
@@ -257,21 +269,34 @@ class MyFrame(wx.Frame):
         return None
     
     def remove_graphic_board(self):
-        self.graphic_board = wx.GridBagSizer(2, 0)
+        for row in range(self.num_rows):
+            self.graphic_board.RemoveGrowableRow(row)  
+        self.graphic_board.Clear(True)
         return None
 
-    def fill_graphic_board(self):        
+    def forward_event_to_graphic_panel(self, event):
+        # Re-target the event to the graphic_panel
+        new_event = wx.MouseEvent(event)
+        new_event.SetEventObject(self.graphic_panel)
+        wx.PostEvent(self.graphic_panel, new_event)
+        
+    def fill_graphic_board(self): 
+
+        #self.status_label.SetLabel("Modifying rows.")
+        # Reset the panels matrix
+        self.panels_matrix = []
         for row in range(self.num_rows):
             self.panels_matrix.append([])
-            for col in range(19):                
-                block_panel = wx.Panel(self, wx.ID_ANY)
-                block_panel.Bind(wx.EVT_LEFT_DOWN, self.on_click_panel)
-                block_panel.Bind(wx.EVT_LEFT_UP, self.off_click)
+            for col in range(19):          
+                block_panel = wx.Panel(self.graphic_panel, wx.ID_ANY)
                 block_panel.SetBackgroundColour(wx.Colour("white"))
                 self.graphic_board.Add(block_panel, (row, col),(0, 0), wx.EXPAND, 0)
-                block_panel.Refresh()
+                # Bind event to each child panel, forwarding to parent
+                block_panel.Bind(wx.EVT_LEFT_DOWN, self.forward_event_to_graphic_panel)
+                block_panel.Bind(wx.EVT_LEFT_UP, self.forward_event_to_graphic_panel)
+
                 self.panels_matrix[row].append(block_panel)
-    
+                
         self.ID_panel0 = self.panels_matrix[0][0].GetId()
 
         for row in range(self.num_rows):
@@ -363,7 +388,7 @@ class MyFrame(wx.Frame):
     
     def on_spin_rows(self, event):
         self.waiting_for_move = False
-        self.start_game()
+        self.Freeze()
         self.remove_graphic_board()
         self.num_rows = self.rows_ctrl.GetValue()
         self.draw_letters()
@@ -371,6 +396,8 @@ class MyFrame(wx.Frame):
         self.waiting_for_move = False
         self.Layout()
         self.time_to_draw_next_state= 1800 // self.num_rows
+        self.Thaw()
+        self.start_game()
         return None
     
 class MyApp(wx.App):
@@ -379,292 +406,6 @@ class MyApp(wx.App):
         self.SetTopWindow(self.frame)
         self.frame.Show()
         return True
-
-class Board():
-    def __init__(self, num_rows, lines_list, line_to_read, total_lines):
-        self.num_rows = num_rows
-        self.lines_list = lines_list
-        self.line_to_read = line_to_read
-        self.total_lines = total_lines
-        self.rows = []
-        for _ in range(self.num_rows):
-            self.rows.append(Row())
-        self.game_over = False
-        self.score = 0
-        return None
-
-    def read_line(self):
-        if self.rows[0].blocks != []:
-            self.game_over = True
-            return None
-        else:
-            if self.total_lines - 1 == self.line_to_read:
-                self.line_to_read = 0
-            line = self.lines_list[self.line_to_read]
-            if len(line) > 11:  # Just in case there are more than 10 characters in a line
-                line = line[0:10]
-                print("Make sure the file is correct!!! (More than 10 characters in a row)")
-            if ord(line[len(line) - 1]) != 10:
-                line += chr(10)  # Add newline character if missing
-            self.line_to_read += 1
-            self.place_read_line(line)
-            return None
-
-    # Adds the read line from the file to the board with its blocks
-    def place_read_line(self, line):
-        pos = 0
-        while pos < (len(line) - 1):
-            # We don't care about the newline character at the end: line[len(line) - 1]
-            if line[pos] != " ":
-                length = 0
-                start_pos = pos
-                if line[pos] in ("b", "B"):
-                    char = line[pos]
-                    while char == line[pos]:
-                        if length == 0:
-                            start_pos = start_pos  # initial position of the block
-                        length += 1
-                        if pos == len(line) - 1:
-                            break
-                        pos += 1
-                    symbol = "$"  # blocks starting with b or B get symbol $
-                elif line[pos] in ("c", "C"):
-                    char = line[pos]
-                    while char == line[pos]:
-                        if length == 0:
-                            start_pos = start_pos
-                        length += 1
-                        if pos == len(line) - 1:
-                            break
-                        pos += 1
-                    symbol = "%"  # blocks starting with c or C get symbol %
-                else:  # for a or A (or other), treated similarly
-                    char = line[pos]
-                    while char == line[pos]:
-                        if length == 0:
-                            start_pos = start_pos
-                        length += 1
-                        if pos == len(line) - 1:
-                            break
-                        pos += 1
-                    symbol = "#"  # default symbol
-                self.rows[0].add_block(start_pos, length, symbol)
-            else:
-                pos += 1
-        return None
-
-    # Validates the move syntax (--- or a capital letter A-L, a positive number < num_rows and a symbol < or >)
-    # and if the move can be made
-    def validate_move_and_execute(self, move):
-        if len(move) == 3:
-            if move == "---":
-                return 0
-            else:
-                # Convert capital letter row to number
-                row = ord(move[0]) - 65
-                if row < 0 or row > self.num_rows - 1:
-                    return "Syntax error in first position: must be a row."
-                try:
-                    cell_to_move = int(move[1])
-                except:
-                    return "Syntax error in second position: must be a number."
-                cell = Block(cell_to_move, 1, "X")
-                # Create a block of length 1 to check if there is a block at that position
-                block_found = False
-                pos = 0
-                for block in self.rows[row].blocks:
-                    if block.share_position_with(cell):
-                        block_found = True
-                        break
-                    pos += 1
-                if not block_found:
-                    return "Error, no block in that cell."
-                else:
-                    if move[2] == "<":
-                        if pos == 0:
-                            if self.rows[row].blocks[pos].start == 0:
-                                return "Error, block is at the left edge."
-                            else:
-                                # Move block to left edge
-                                self.rows[row].blocks[pos].start = 0
-                                return 0
-                        else:
-                            return self.move_block_left(row, pos)
-                    elif move[2] == ">":
-                        if len(self.rows[row].blocks) == pos + 1:
-                            if self.rows[row].blocks[pos].start + self.rows[row].blocks[pos].length - 1 == 9:
-                                return "Error, block is at the right edge."
-                            else:
-                                self.rows[row].blocks[pos].start = 10 - self.rows[row].blocks[pos].length
-                                return 0
-                        else:
-                            return self.move_block_right(row, pos)
-                    else:
-                        return "No movement detected."
-        else:
-            return "You must move the mouse before releasing it to make moves."
-
-    def move_block_left(self, row, pos):
-        # Check that blocks are not adjacent on the left
-        if ((self.rows[row].blocks[pos - 1].start + self.rows[row].blocks[pos - 1].length) -
-            self.rows[row].blocks[pos].start) == 0:
-            return "Error, block is stuck to another on the left."
-        else:
-            # Move block left until it touches the previous block
-            self.rows[row].blocks[pos].start = (self.rows[row].blocks[pos - 1].start +
-                                                self.rows[row].blocks[pos - 1].length)
-            return 0
-
-    def move_block_right(self, row, pos):
-        # Same as above but for the right
-        if (self.rows[row].blocks[pos + 1].start - (self.rows[row].blocks[pos].start +
-            self.rows[row].blocks[pos].length)) == 0:
-            return "Error, block is stuck to another on the right."
-        else:
-            self.rows[row].blocks[pos].start = (self.rows[row].blocks[pos + 1].start -
-                                                self.rows[row].blocks[pos].length)
-            return 0
-
-    def fall(self, row):
-        while self.rows[row + 1].blocks == []:
-            # If the row below has no blocks, the blocks fall directly
-            self.free_fall(row)
-            row += 1
-            if row == self.num_rows - 1:
-                return None  # fall has finished at the last row
-        self.block_fall(row)
-        return None
-
-    def free_fall(self, row):
-        for block in self.rows[row].blocks:
-            # Copy blocks from current row to the row below
-            self.rows[row + 1].blocks.append(block)
-        # Clear blocks from the current row
-        self.rows[row].blocks = []
-        return None
-
-    def block_fall(self, row):
-        block_pos = 0
-        blocks_to_remove = []
-        for block in self.rows[row].blocks:
-            if self.can_fall(block, row):
-                blocks_to_remove, new_pos = self.fall_block(row, block, block_pos, blocks_to_remove)
-                next_row = row + 1
-                if next_row != self.num_rows - 1:
-                    while self.can_fall(block, next_row):
-                        blocks_to_remove, new_pos = self.fall_block(next_row, block, new_pos, blocks_to_remove)
-                        next_row += 1
-                        if next_row == self.num_rows - 1:
-                            break
-            block_pos += 1
-        self.remove_blocks(blocks_to_remove)
-        return None
-
-    def can_fall(self, block_above, row):
-        can_fall = True
-        for block_below in self.rows[row + 1].blocks:
-            if block_above.share_position_with(block_below):
-                can_fall = False
-                break
-        return can_fall
-
-    def remove_blocks(self, blocks_to_remove):
-        pos = 0
-        removed_blocks_count = [0] * self.num_rows
-        for number in blocks_to_remove:
-            if pos % 2 == 0:
-                row = number
-            else:
-                block_pos = number
-                block_pos -= removed_blocks_count[row]
-                self.rows[row].blocks.pop(block_pos)
-                self.rows[row].blocks.sort()
-                removed_blocks_count[row] += 1
-            pos += 1
-        return None
-
-    def fall_block(self, row, block, block_pos, blocks_to_remove):
-        self.rows[row + 1].blocks.append(block)
-        blocks_to_remove.append(row)
-        blocks_to_remove.append(block_pos)
-        block_pos = self.rows[row + 1].sort_blocks()
-        return blocks_to_remove, block_pos
-
-    def count_points_on_board(self):
-        points = 0
-        for row in self.rows:
-            for block in row.blocks:
-                points += block.length
-        return points
-
-    def try_clear_rows(self):
-        pos_row = 0
-        for row in self.rows:
-            if row.blocks != []:
-                all_same_symbol = True
-                symbol = row.blocks[0].symbol
-                occupied_cells = ""
-                for block in row.blocks:
-                    if block.symbol != symbol and all_same_symbol:
-                        all_same_symbol = False
-                    occupied_cells += block.block_cells()
-                if len(occupied_cells) == 10:
-                    self.score += 10
-                    self.rows[pos_row].blocks = []
-                    if all_same_symbol:
-                        self.score += self.count_points_on_board()
-                        self.rows = []
-                        for _ in range(self.num_rows):
-                            self.rows.append(Row())
-                        return True, -1
-                    else:
-                        return True, pos_row
-            pos_row += 1
-        return False, -1
-
-class Row():
-
-    def __init__(self):
-        self.blocks = []
-
-    def add_block(self, start, length, symbol):
-        self.blocks.append(Block(start, length, symbol))
-        return None
-
-    def sort_blocks(self):
-        pos_new = 0
-        for block in self.blocks:
-            if block.start > self.blocks[-1].start or pos_new == len(self.blocks) - 1:
-                break
-            pos_new += 1
-        self.blocks.sort()
-        return pos_new
-
-class Block():
-
-    def __init__(self, start, length, symbol):
-        self.start = start
-        self.length = length
-        self.symbol = symbol
-        return None
-
-    def block_cells(self):
-        cells = ""
-        for i in range(self.length):
-            cells += str(self.start + i)
-        return cells
-
-    def share_position_with(self, block_below):
-        shared = False
-        cells_above = self.block_cells()
-        for i in range(block_below.length):
-            if cells_above.find(str(block_below.start + i)) != -1:
-                shared = True
-                break
-        return shared
-
-    def __lt__(self, other):
-        return self.start < other.start
 
 if __name__ == "__main__":
     app = MyApp(0)
