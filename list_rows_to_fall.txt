@@ -1,4 +1,4 @@
-CBCBA CBAA
+ BCBA CBAA
  C CBC  c
 CAA CbbbbC
   B ccCCC

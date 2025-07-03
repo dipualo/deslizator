@@ -396,8 +396,8 @@ class MyFrame(wx.Frame):
         self.waiting_for_move = False
         self.Layout()
         self.time_to_draw_next_state= 1800 // self.num_rows
-        self.Thaw()
         self.start_game()
+        self.Thaw()
         return None
     
 class MyApp(wx.App):
